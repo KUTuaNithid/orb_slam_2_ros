@@ -22,9 +22,9 @@ Node::~Node () {
 
 void Node::Init () {
   //static parameters
-  node_handle_.param(name_of_node_+ "/publish_pointcloud", publish_pointcloud_param_, true);
-  node_handle_.param(name_of_node_+ "/publish_pose", publish_pose_param_, true);
-  node_handle_.param(name_of_node_+ "/publish_tf", publish_tf_param_, true);
+  node_handle_.param(name_of_node_+ "/publish_pointcloud", publish_pointcloud_param_, false);
+  node_handle_.param(name_of_node_+ "/publish_pose", publish_pose_param_, false);
+  node_handle_.param(name_of_node_+ "/publish_tf", publish_tf_param_, false);
   node_handle_.param<std::string>(name_of_node_+ "/pointcloud_frame_id", map_frame_id_param_, "map");
   node_handle_.param<std::string>(name_of_node_+ "/camera_frame_id", camera_frame_id_param_, "camera_link");
   node_handle_.param<std::string>(name_of_node_+ "/target_frame_id", target_frame_id_param_, "base_link");
@@ -70,7 +70,6 @@ void Node::Update () {
     if (publish_tf_param_){
       PublishPositionAsTransform(position);
     }
-
     if (publish_pose_param_) {
       PublishPositionAsPoseStamped(position);
     }
@@ -152,6 +151,7 @@ void Node::PublishPositionAsTransform (cv::Mat position) {
   tf2::Transform tf_transform = TransformFromMat(position);
 
   // Make transform from camera frame to target frame
+  ROS_INFO("PublishPositionAsTransform");
   tf2::Transform tf_map2target = TransformToTarget(tf_transform, camera_frame_id_param_, target_frame_id_param_);
 
   // Make message
@@ -168,6 +168,7 @@ void Node::PublishPositionAsPoseStamped (cv::Mat position) {
   tf2::Transform tf_position = TransformFromMat(position);
 
   // Make transform from camera frame to target frame
+  ROS_INFO("PublishPositionAsPoseStamped");
   tf2::Transform tf_position_target = TransformToTarget(tf_position, camera_frame_id_param_, target_frame_id_param_);
   
   // Make message

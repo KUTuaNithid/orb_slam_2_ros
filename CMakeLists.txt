@@ -28,6 +28,7 @@ tf2_ros
 sensor_msgs
 dynamic_reconfigure
 message_generation
+sem_img_msg
 )
 
 find_package(OpenCV 4.0 QUIET)

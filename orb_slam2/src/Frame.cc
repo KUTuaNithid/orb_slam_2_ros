@@ -116,7 +116,7 @@ Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeSt
     AssignFeaturesToGrid();
 }
 
-Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp, ORBextractor* extractor,ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth)
+Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp, ORBextractor* extractor,ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth, const ORB_SLAM2::objectdetection& objects)
     :mpORBvocabulary(voc),mpORBextractorLeft(extractor),mpORBextractorRight(static_cast<ORBextractor*>(NULL)),
      mTimeStamp(timeStamp), mK(K.clone()),mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth)
 {
@@ -143,6 +143,9 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
     UndistortKeyPoints();
 
     ComputeStereoFromRGBD(imDepth);
+
+    // Add labels to frame
+    create_labels_vector(objects);
 
     mvpMapPoints = vector<MapPoint*>(N,static_cast<MapPoint*>(NULL));
     mvbOutlier = vector<bool>(N,false);
@@ -225,6 +228,39 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor* extra
     mb = mbf/fx;
 
     AssignFeaturesToGrid();
+}
+
+void Frame::create_labels_vector(const ORB_SLAM2::objectdetection &objects)
+{
+    labels_ = Eigen::Array<float,MAX_OBJECT_NUM,1>::Zero();
+    
+    if (objects.objects_.size() <= 0) {
+        cout << "This frame has no object" << endl;
+        return;
+    }
+    // Indicate valid object in this frame
+    labels_(0) = VALID_OBJ;
+    for (auto object : objects.objects_)
+    {
+        float prob = std::get<0>(object);
+        signed long int x_cen = std::get<1>(object);
+        signed long int y_cen = std::get<2>(object);
+        signed long int width = std::get<3>(object);
+        signed long int height = std::get<4>(object);
+        signed short int id = std::get<5>(object);
+        std::string Class = std::get<6>(object);
+        float depth = std::get<7>(object);
+        
+        // auto it = std::find(target_labels_.begin(), target_labels_.end(), Class);
+        // if (it != target_labels_.end()) {
+        //     int index = it - target_labels_.begin();
+        //     labels_(index) += 1;
+        //     cout << "Class is  : " << Class.c_str() << index << endl;
+        // }
+        labels_(id) += 1;
+        // cout << "Class is  : " << Class.c_str() << id << endl;
+        
+    }
 }
 
 void Frame::AssignFeaturesToGrid()
@@ -677,6 +713,10 @@ cv::Mat Frame::UnprojectStereo(const int &i)
     }
     else
         return cv::Mat();
+}
+
+void objectdetection::add_object(float probability, signed long int x_cen, signed long int y_cen, signed long int width, signed long int height, signed short int id, std::string Class, float depth) {
+    objects_.push_back(std::make_tuple(probability, x_cen, y_cen, width, height, id, Class, depth));
 }
 
 } //namespace ORB_SLAM

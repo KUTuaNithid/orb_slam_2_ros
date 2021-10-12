@@ -185,7 +185,7 @@ cv::Mat Tracking::GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat &imRe
 }
 
 
-cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, const double &timestamp)
+cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, const double &timestamp, const ORB_SLAM2::objectdetection& objects)
 {
     mImGray = imRGB;
     cv::Mat imDepth = imD;
@@ -208,7 +208,7 @@ cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, const d
     if((fabs(mDepthMapFactor-1.0f)>1e-5) || imDepth.type()!=CV_32F)
         imDepth.convertTo(imDepth,CV_32F,mDepthMapFactor);
 
-    mCurrentFrame = Frame(mImGray,imDepth,timestamp,mpORBextractorLeft,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth);
+    mCurrentFrame = Frame(mImGray,imDepth,timestamp,mpORBextractorLeft,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth,objects);
 
     Track();
 
@@ -1318,21 +1318,31 @@ void Tracking::UpdateLocalKeyFrames()
         mCurrentFrame.mpReferenceKF = mpReferenceKF;
     }
 }
-
+#include <chrono>
+using namespace std;
+using namespace std::chrono;
 bool Tracking::Relocalization()
 {
+    cout << "Relocalization !!" << endl;
+    auto start = high_resolution_clock::now();
+
+    
     // Compute Bag of Words Vector
     mCurrentFrame.ComputeBoW();
 
+    auto Dstart = high_resolution_clock::now();
     // Relocalization is performed when tracking is lost
     // Track Lost: Query KeyFrame Database for keyframe candidates for relocalisation
     vector<KeyFrame*> vpCandidateKFs = mpKeyFrameDB->DetectRelocalizationCandidates(&mCurrentFrame);
+    auto Dstop = high_resolution_clock::now();
+    // cout << "DetectRelocalizationCandidates: "
+    //      << Dduration.count() << " microseconds" << "Relo size " << vpCandidateKFs.size() << endl;
 
     if(vpCandidateKFs.empty())
         return false;
 
     const int nKFs = vpCandidateKFs.size();
-
+    cout << "nKFs " << nKFs << endl;
     // We perform first an ORB matching with each candidate
     // If enough matches are found we setup a PnP solver
     ORBmatcher matcher(0.75,true);
@@ -1375,7 +1385,7 @@ bool Tracking::Relocalization()
     // Until we found a camera pose supported by enough inliers
     bool bMatch = false;
     ORBmatcher matcher2(0.9,true);
-
+    long int id = 0;
     while(nCandidates>0 && !bMatch)
     {
         for(int i=0; i<nKFs; i++)
@@ -1463,12 +1473,20 @@ bool Tracking::Relocalization()
                 // If the pose is supported by enough inliers stop ransacs and continue
                 if(nGood>=50)
                 {
+                    id = vpCandidateKFs[i]->mnId;
                     bMatch = true;
                     break;
                 }
             }
         }
     }
+    auto stop = high_resolution_clock::now();
+    auto duration = duration_cast<microseconds>(stop - start);
+    auto Dduration = duration_cast<microseconds>(Dstop - Dstart);
+    // cout << bow << ", " << filter_dura << ", " << after << ", " << Dduration.count() << ", " << duration.count() << endl;
+    cout << bow << ", " << after << ", " << after1 << ", " << Dduration.count() << ", " << duration.count() << endl;
+    // cout << Dduration.count() << ", " << duration.count() << endl;
+    cout << "bMatch " << bMatch << " id " << id << endl;
 
     if(!bMatch)
     {

@@ -31,11 +31,16 @@
 #include "BoostArchiver.h"
 
 #include<mutex>
-
+#include <chrono>
+using namespace std;
+using namespace std::chrono;
 
 namespace ORB_SLAM2
 {
-
+extern double filter_dura;
+extern double after;
+extern double after1;
+extern double bow;
 class KeyFrame;
 class Frame;
 
@@ -57,14 +62,18 @@ public:
 
    // Relocalization
    std::vector<KeyFrame*> DetectRelocalizationCandidates(Frame* F);
-
+   int label_score(const KeyFrame* kf, const Frame *F);
+   // void filter_by_label(list<KeyFrame*>& lkf, const Frame *F);
+   void filter_by_label(vector<KeyFrame*>& lkf, const Frame *F);
+   std::vector<list<KeyFrame*> > mvInvertedFile;
+   list<KeyFrame*> keyfrmsLst;
 protected:
 
   // Associated vocabulary
   const ORBVocabulary* mpVoc;
 
   // Inverted file
-  std::vector<list<KeyFrame*> > mvInvertedFile;
+//   std::vector<list<KeyFrame*> > mvInvertedFile;
 
   // Mutex
   std::mutex mMutex;

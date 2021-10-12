@@ -29,6 +29,7 @@
 #include "ORBVocabulary.h"
 #include "KeyFrame.h"
 #include "ORBextractor.h"
+#include <Eigen/Dense>
 
 #include <opencv2/opencv.hpp>
 
@@ -36,10 +37,20 @@ namespace ORB_SLAM2
 {
 #define FRAME_GRID_ROWS 48
 #define FRAME_GRID_COLS 64
-
+#define VALID_OBJ 1234
+#define MAX_OBJECT_NUM 13
 class MapPoint;
 class KeyFrame;
+class objectdetection {
+public:
+    using pos_t = std::tuple<float, float, float>;
 
+    using object_t = std::tuple<float, signed long int, signed long int, signed long int, signed long int, signed short int, std::string, float>;
+
+    void add_object(float probability, signed long int x_cen, signed long int y_cen, signed long int width, signed long int height, signed short int id, std::string Class, float depth);
+
+    std::vector<object_t> objects_;
+};
 class Frame
 {
 public:
@@ -52,7 +63,7 @@ public:
     Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeStamp, ORBextractor* extractorLeft, ORBextractor* extractorRight, ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth);
 
     // Constructor for RGB-D cameras.
-    Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp, ORBextractor* extractor,ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth);
+    Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp, ORBextractor* extractor,ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth, const ORB_SLAM2::objectdetection& objects = ORB_SLAM2::objectdetection{});
 
     // Constructor for Monocular cameras.
     Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor* extractor,ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth);
@@ -97,6 +108,8 @@ public:
 
     // Backprojects a keypoint (if stereo/depth info available) into 3D world coordinates.
     cv::Mat UnprojectStereo(const int &i);
+
+    void create_labels_vector(const ORB_SLAM2::objectdetection &objects);
 
 public:
     // Vocabulary used for relocalization.
@@ -187,6 +200,8 @@ public:
 
     static bool mbInitialComputations;
 
+    // Label information
+    Eigen::Array<float,MAX_OBJECT_NUM,1> labels_;
 
 private:
 

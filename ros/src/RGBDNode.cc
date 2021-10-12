@@ -29,21 +29,23 @@ int main(int argc, char **argv)
 RGBDNode::RGBDNode (const ORB_SLAM2::System::eSensor sensor, ros::NodeHandle &node_handle, image_transport::ImageTransport &image_transport) : Node (sensor, node_handle, image_transport) {
   rgb_subscriber_ = new message_filters::Subscriber<sensor_msgs::Image> (node_handle, "/camera/rgb/image_raw", 1);
   depth_subscriber_ = new message_filters::Subscriber<sensor_msgs::Image> (node_handle, "/camera/depth_registered/image_raw", 1);
+  object_subscriber_ = new message_filters::Subscriber<sem_img_msg::centerBdboxes> (node_handle, "/camera/boundingbox", 1);
   camera_info_topic_ = "/camera/rgb/camera_info";
 
-  sync_ = new message_filters::Synchronizer<sync_pol> (sync_pol(10), *rgb_subscriber_, *depth_subscriber_);
-  sync_->registerCallback(boost::bind(&RGBDNode::ImageCallback, this, _1, _2));
+  sync_ = new message_filters::Synchronizer<sync_pol> (sync_pol(10), *rgb_subscriber_, *depth_subscriber_, *object_subscriber_);
+  sync_->registerCallback(boost::bind(&RGBDNode::ImageCallback, this, _1, _2, _3));
 }
 
 
 RGBDNode::~RGBDNode () {
   delete rgb_subscriber_;
   delete depth_subscriber_;
+  delete object_subscriber_;
   delete sync_;
 }
 
 
-void RGBDNode::ImageCallback (const sensor_msgs::ImageConstPtr& msgRGB, const sensor_msgs::ImageConstPtr& msgD) {
+void RGBDNode::ImageCallback (const sensor_msgs::ImageConstPtr& msgRGB, const sensor_msgs::ImageConstPtr& msgD, const sem_img_msg::centerBdboxes::ConstPtr &bdbox) {
   // Copy the ros image message to cv::Mat.
   cv_bridge::CvImageConstPtr cv_ptrRGB;
   try {
@@ -61,9 +63,17 @@ void RGBDNode::ImageCallback (const sensor_msgs::ImageConstPtr& msgRGB, const se
       return;
   }
 
+  ORB_SLAM2::objectdetection objects;
+  for (unsigned int i = 0; i < bdbox->centerBdboxes.size(); i++)
+  {
+    objects.add_object(bdbox->centerBdboxes[i].probability, bdbox->centerBdboxes[i].x_cen, bdbox->centerBdboxes[i].y_cen, bdbox->centerBdboxes[i].width, bdbox->centerBdboxes[i].height, bdbox->centerBdboxes[i].id, bdbox->centerBdboxes[i].Class, bdbox->centerBdboxes[i].depth);
+    // if (bdbox->centerBdboxes[i].depth != -1)
+    //     ROS_INFO("bdbox->centerBdboxes[i].Class %s bdbox->centerBdboxes[i].depth %f", bdbox->centerBdboxes[i].Class.c_str(), bdbox->centerBdboxes[i].depth);
+  }
+
   current_frame_time_ = msgRGB->header.stamp;
 
-  orb_slam_->TrackRGBD(cv_ptrRGB->image,cv_ptrD->image,cv_ptrRGB->header.stamp.toSec());
+  orb_slam_->TrackRGBD(cv_ptrRGB->image,cv_ptrD->image,cv_ptrRGB->header.stamp.toSec(), objects);
 
   Update ();
 }

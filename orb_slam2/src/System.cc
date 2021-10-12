@@ -173,7 +173,7 @@ void System::TrackStereo(const cv::Mat &imLeft, const cv::Mat &imRight, const do
     current_position_ = Tcw;
 }
 
-void System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const double &timestamp)
+void System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const double &timestamp, const ORB_SLAM2::objectdetection& objects)
 {
     if(mSensor!=RGBD)
     {
@@ -215,7 +215,7 @@ void System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const double 
     }
     }
 
-    cv::Mat Tcw = mpTracker->GrabImageRGBD(im,depthmap,timestamp);
+    cv::Mat Tcw = mpTracker->GrabImageRGBD(im,depthmap,timestamp,objects);
 
     unique_lock<mutex> lock2(mMutexState);
     mTrackingState = mpTracker->mState;

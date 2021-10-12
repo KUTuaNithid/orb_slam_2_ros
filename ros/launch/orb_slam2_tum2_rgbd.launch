@@ -4,13 +4,18 @@
 
        <remap from="camera/depth_registered/image_raw"     to="camera/depth/image"/>
        <remap from="camera/rgb/image_raw"                  to="camera/rgb/image_color"/>  
+       <remap from="/camera/rgb/camera_info"               to="/camera/rgb/camera_info" />
+       <!-- <remap from="camera/rgb/image_raw"                  to="camera/image_raw"/>  
+       <remap from="camera/depth_registered/image_raw"     to="camera/image_depth"/> -->
 
        <param name="publish_pointcloud" type="bool" value="true" />
        <param name="publish_pose" type="bool" value="true" />
-       <param name="localize_only" type="bool" value="false" />
+       <param name="publish_tf" type="bool" value="true" />
+       <param name="localize_only" type="bool" value="true" />
        <param name="reset_map" type="bool" value="false" />
 
        <!-- static parameters -->
+       <param name="load_calibration_from_cam" type="bool" value="true" />
        <param name="load_map" type="bool" value="false" />
        <param name="map_file" type="string" value="map.bin" />
        <param name="settings_file" type="string" value="$(find orb_slam2_ros)/orb_slam2/config/TUM2.yaml" />
@@ -20,4 +25,13 @@
        <param name="camera_frame_id" type="string" value="camera_link" />
        <param name="min_num_kf_in_map" type="int" value="5" />
   </node>
+      <!-- Visualization - RViz -->
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find orb_slam2_ros)/ros/config/rviz_config.rviz" output="screen" />
+
+    <!-- <node pkg="hector_trajectory_server" type="hector_trajectory_server" name="trajectory_server_orb_slam2" output="screen" ns="orb_slam2_ros" >
+        <param name="/target_frame_name" value="/world" />
+        <param name="/source_frame_name" value="/camera" />
+        <param name="/trajectory_update_rate" value="20.0" />
+        <param name="/trajectory_publish_rate" value="20.0" />
+    </node> -->
 </launch>

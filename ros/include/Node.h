@@ -47,6 +47,9 @@
 #include <sensor_msgs/CameraInfo.h>
 #include <std_msgs/Bool.h>
 
+#include <sem_img_msg/centerBdbox.h>
+#include <sem_img_msg/centerBdboxes.h>
+
 #include "System.h"
 
 

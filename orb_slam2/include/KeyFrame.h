@@ -29,13 +29,14 @@
 #include "Frame.h"
 #include "KeyFrameDatabase.h"
 #include "BoostArchiver.h"
+#include <Eigen/Dense>
 
 #include <mutex>
 
-
 namespace ORB_SLAM2
 {
-
+#define VALID_OBJ 1234
+#define MAX_OBJECT_NUM 13
 class Map;
 class MapPoint;
 class Frame;
@@ -188,6 +189,8 @@ public:
     const int mnMaxX;
     const int mnMaxY;
     const cv::Mat mK;
+
+    Eigen::Array<float,MAX_OBJECT_NUM,1> labels_;
 
 
     // The following variables need to be accessed trough a mutex to be thread safe.
