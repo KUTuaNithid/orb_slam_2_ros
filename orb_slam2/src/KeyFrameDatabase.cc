@@ -242,7 +242,7 @@ void KeyFrameDatabase::filter_by_label(vector<KeyFrame*>& lkf, const Frame *F) {
         }
     }
     // int rank = int(0.2*(lkf.size()+1));
-    float thres = (min_score)*110/100;
+    float thres = (min_score+1)*110/100;
     // sort(scores.begin(), scores.end(), cmp);
     // cout << "min " <<  min_score << "thres " << thres << endl;
     // cout << "max_score " << max_score << "rank " << rank << endl;
