@@ -63,8 +63,8 @@ public:
    // Relocalization
    std::vector<KeyFrame*> DetectRelocalizationCandidates(Frame* F);
    int label_score(const KeyFrame* kf, const Frame *F);
-   // void filter_by_label(list<KeyFrame*>& lkf, const Frame *F);
-   void filter_by_label(vector<KeyFrame*>& lkf, const Frame *F);
+   void filter_by_label(list<KeyFrame*>& lkf, const Frame *F);
+   // void filter_by_label(vector<KeyFrame*>& lkf, const Frame *F);
    std::vector<list<KeyFrame*> > mvInvertedFile;
    list<KeyFrame*> keyfrmsLst;
 protected:

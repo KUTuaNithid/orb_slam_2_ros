@@ -229,11 +229,11 @@ bool cmp(pair<KeyFrame*, int>& a,
 #include <chrono>
 using namespace std;
 using namespace std::chrono;
-// void KeyFrameDatabase::filter_by_label(list<KeyFrame*>& lkf, const Frame *F) {
-void KeyFrameDatabase::filter_by_label(vector<KeyFrame*>& lkf, const Frame *F) {
+void KeyFrameDatabase::filter_by_label(list<KeyFrame*>& lkf, const Frame *F) {
+// void KeyFrameDatabase::filter_by_label(vector<KeyFrame*>& lkf, const Frame *F) {
     vector<pair<KeyFrame*, int>> scores;
     int min_score = 100; // min. is the best
-    for(auto kf:keyfrmsLst){
+    for(auto kf:lkf){
         int score = label_score(kf, F);
         scores.push_back(make_pair(kf,score));
         // cout << "score " << score << endl;
@@ -266,163 +266,151 @@ double filter_dura=0;
 double after=0;
 double after1=0;
 double bow=0;
-vector<KeyFrame*> KeyFrameDatabase::DetectRelocalizationCandidates(Frame *F)
+vector<KeyFrame *> KeyFrameDatabase::DetectRelocalizationCandidates(Frame *F)
 {
-    list<KeyFrame*> lKFsSharingWords;
+    list<KeyFrame *> lKFsSharingWords;
     // cout << "DetectRelocalizationCandidates !! " << keyfrmsLst.size() << endl;
     bool label = false;
     // Search all keyframes that share a word with current frame
-    // {
+    {
         auto bow_start = high_resolution_clock::now();
         unique_lock<mutex> lock(mMutex);
 
-        // cout << "BOW: " << Dduration.count() << " microseconds" << endl;
+        for (DBoW2::BowVector::const_iterator vit = F->mBowVec.begin(), vend = F->mBowVec.end(); vit != vend; vit++)
+        {
+            list<KeyFrame *> &lKFs = mvInvertedFile[vit->first];
+
+            for (list<KeyFrame *>::iterator lit = lKFs.begin(), lend = lKFs.end(); lit != lend; lit++)
+            {
+                KeyFrame *pKFi = *lit;
+                if (pKFi->mnRelocQuery != F->mnId)
+                {
+                    pKFi->mnRelocWords = 0;
+                    pKFi->mnRelocQuery = F->mnId;
+                    lKFsSharingWords.push_back(pKFi);
+                }
+                pKFi->mnRelocWords++;
+            }
+        }
         cout << "Before lKFsSharingWords size" << lKFsSharingWords.size() << endl;
         cout << "# Object " << F->labels_.sum() - VALID_OBJ << endl;
         if (F->labels_(0) == VALID_OBJ)
         // if (0)
         {
-            vector<KeyFrame*> vpRelocCandidates;
             // auto Dstart = high_resolution_clock::now();
             label = true;
             // filter_by_label(lKFsSharingWords, F);
-            filter_by_label(vpRelocCandidates, F);
+            filter_by_label(lKFsSharingWords, F);
             // auto Dstop = high_resolution_clock::now();
             // auto Dduration = duration_cast<microseconds>(Dstop - Dstart);
             // filter_dura = Dduration.count();
             // cout << "filter_by_label: " << Dduration.count() << " microseconds" << endl;
-            return vpRelocCandidates;
-
         }
-        else
+        auto bow_stop = high_resolution_clock::now();
+        auto bow_du = duration_cast<microseconds>(bow_stop - bow_start);
+        bow = bow_du.count();
+    }
+
+    auto Dstart = high_resolution_clock::now();
+    cout << "After lKFsSharingWords size" << lKFsSharingWords.size() << endl;
+    if (lKFsSharingWords.empty())
+        return vector<KeyFrame *>();
+
+    // Only compare against those keyframes that share enough words
+    int maxCommonWords = 0;
+
+    for (list<KeyFrame *>::iterator lit = lKFsSharingWords.begin(), lend = lKFsSharingWords.end(); lit != lend; lit++)
+    {
+        if ((*lit)->mnRelocWords > maxCommonWords)
+            maxCommonWords = (*lit)->mnRelocWords;
+    }
+
+    int minCommonWords = maxCommonWords * 0.8f;
+
+    list<pair<float, KeyFrame *>> lScoreAndMatch;
+
+    int nscores = 0;
+
+    // Compute similarity score.
+    for (list<KeyFrame *>::iterator lit = lKFsSharingWords.begin(), lend = lKFsSharingWords.end(); lit != lend; lit++)
+    {
+        KeyFrame *pKFi = *lit;
+
+        // auto Dstart = high_resolution_clock::now();
+        if (pKFi->mnRelocWords > minCommonWords)
         {
-            for (DBoW2::BowVector::const_iterator vit = F->mBowVec.begin(), vend = F->mBowVec.end(); vit != vend; vit++)
-            {
-                list<KeyFrame *> &lKFs = mvInvertedFile[vit->first];
-
-                for (list<KeyFrame *>::iterator lit = lKFs.begin(), lend = lKFs.end(); lit != lend; lit++)
-                {
-                    KeyFrame *pKFi = *lit;
-                    if (pKFi->mnRelocQuery != F->mnId)
-                    {
-                        pKFi->mnRelocWords = 0;
-                        pKFi->mnRelocQuery = F->mnId;
-                        lKFsSharingWords.push_back(pKFi);
-                    }
-                    pKFi->mnRelocWords++;
-                }
-            }
-            auto bow_stop = high_resolution_clock::now();
-            auto bow_du = duration_cast<microseconds>(bow_stop - bow_start);
-            bow = bow_du.count();
-            // }
-
-            auto Dstart = high_resolution_clock::now();
-            cout << "After lKFsSharingWords size" << lKFsSharingWords.size() << endl;
-            if (lKFsSharingWords.empty())
-                return vector<KeyFrame *>();
-
-            // Only compare against those keyframes that share enough words
-            int maxCommonWords = 0;
-            if (!label)
-            {
-                for (list<KeyFrame *>::iterator lit = lKFsSharingWords.begin(), lend = lKFsSharingWords.end(); lit != lend; lit++)
-                {
-                    if ((*lit)->mnRelocWords > maxCommonWords)
-                        maxCommonWords = (*lit)->mnRelocWords;
-                }
-            }
-
-            int minCommonWords = maxCommonWords * 0.8f;
-
-            list<pair<float, KeyFrame *>> lScoreAndMatch;
-
-            int nscores = 0;
-
-            // Compute similarity score.
-            for (list<KeyFrame *>::iterator lit = lKFsSharingWords.begin(), lend = lKFsSharingWords.end(); lit != lend; lit++)
-            {
-                KeyFrame *pKFi = *lit;
-
-                // auto Dstart = high_resolution_clock::now();
-                if (pKFi->mnRelocWords > minCommonWords || label)
-                {
-                    nscores++;
-                    float si = mpVoc->score(F->mBowVec, pKFi->mBowVec);
-                    pKFi->mRelocScore = si;
-                    lScoreAndMatch.push_back(make_pair(si, pKFi));
-                }
-                // auto Dstop = high_resolution_clock::now();
-                // auto Dduration = duration_cast<microseconds>(Dstop - Dstart);
-                // if (Dduration.count() > 1){
-                //     cout << "ID " << pKFi->mnId << " time " << Dduration.count() << endl;
-                // }
-            }
-
-            auto Dstop = high_resolution_clock::now();
-            auto Dduration = duration_cast<microseconds>(Dstop - Dstart);
-            after = Dduration.count();
-            Dstart = high_resolution_clock::now();
-
-            if (lScoreAndMatch.empty())
-                return vector<KeyFrame *>();
-
-            list<pair<float, KeyFrame *>> lAccScoreAndMatch;
-            float bestAccScore = 0;
-
-            // Lets now accumulate score by covisibility
-            for (list<pair<float, KeyFrame *>>::iterator it = lScoreAndMatch.begin(), itend = lScoreAndMatch.end(); it != itend; it++)
-            {
-                KeyFrame *pKFi = it->second;
-                vector<KeyFrame *> vpNeighs = pKFi->GetBestCovisibilityKeyFrames(10);
-
-                float bestScore = it->first;
-                float accScore = bestScore;
-                KeyFrame *pBestKF = pKFi;
-                for (vector<KeyFrame *>::iterator vit = vpNeighs.begin(), vend = vpNeighs.end(); vit != vend; vit++)
-                {
-                    KeyFrame *pKF2 = *vit;
-                    if (pKF2->mnRelocQuery != F->mnId)
-                        continue;
-
-                    accScore += pKF2->mRelocScore;
-                    if (pKF2->mRelocScore > bestScore)
-                    {
-                        pBestKF = pKF2;
-                        bestScore = pKF2->mRelocScore;
-                    }
-                }
-                lAccScoreAndMatch.push_back(make_pair(accScore, pBestKF));
-                if (accScore > bestAccScore)
-                    bestAccScore = accScore;
-            }
-
-            // Return all those keyframes with a score higher than 0.75*bestScore
-            float minScoreToRetain = 0.75f * bestAccScore;
-            set<KeyFrame *> spAlreadyAddedKF;
-            vector<KeyFrame *> vpRelocCandidates;
-            vpRelocCandidates.reserve(lAccScoreAndMatch.size());
-            for (list<pair<float, KeyFrame *>>::iterator it = lAccScoreAndMatch.begin(), itend = lAccScoreAndMatch.end(); it != itend; it++)
-            {
-                const float &si = it->first;
-                if (si > minScoreToRetain)
-                {
-                    KeyFrame *pKFi = it->second;
-                    if (!spAlreadyAddedKF.count(pKFi))
-                    {
-                        vpRelocCandidates.push_back(pKFi);
-                        spAlreadyAddedKF.insert(pKFi);
-                    }
-                }
-            }
-            Dstop = high_resolution_clock::now();
-            Dduration = duration_cast<microseconds>(Dstop - Dstart);
-            after1 = Dduration.count();
-            return vpRelocCandidates;
+            nscores++;
+            float si = mpVoc->score(F->mBowVec, pKFi->mBowVec);
+            pKFi->mRelocScore = si;
+            lScoreAndMatch.push_back(make_pair(si, pKFi));
         }
+        // auto Dstop = high_resolution_clock::now();
+        // auto Dduration = duration_cast<microseconds>(Dstop - Dstart);
+        // if (Dduration.count() > 1){
+        //     cout << "ID " << pKFi->mnId << " time " << Dduration.count() << endl;
+        // }
+    }
 
+    auto Dstop = high_resolution_clock::now();
+    auto Dduration = duration_cast<microseconds>(Dstop - Dstart);
+    after = Dduration.count();
+    Dstart = high_resolution_clock::now();
 
+    if (lScoreAndMatch.empty())
+        return vector<KeyFrame *>();
 
+    list<pair<float, KeyFrame *>> lAccScoreAndMatch;
+    float bestAccScore = 0;
+
+    // Lets now accumulate score by covisibility
+    for (list<pair<float, KeyFrame *>>::iterator it = lScoreAndMatch.begin(), itend = lScoreAndMatch.end(); it != itend; it++)
+    {
+        KeyFrame *pKFi = it->second;
+        vector<KeyFrame *> vpNeighs = pKFi->GetBestCovisibilityKeyFrames(10);
+
+        float bestScore = it->first;
+        float accScore = bestScore;
+        KeyFrame *pBestKF = pKFi;
+        for (vector<KeyFrame *>::iterator vit = vpNeighs.begin(), vend = vpNeighs.end(); vit != vend; vit++)
+        {
+            KeyFrame *pKF2 = *vit;
+            if (pKF2->mnRelocQuery != F->mnId)
+                continue;
+
+            accScore += pKF2->mRelocScore;
+            if (pKF2->mRelocScore > bestScore)
+            {
+                pBestKF = pKF2;
+                bestScore = pKF2->mRelocScore;
+            }
+        }
+        lAccScoreAndMatch.push_back(make_pair(accScore, pBestKF));
+        if (accScore > bestAccScore)
+            bestAccScore = accScore;
+    }
+
+    // Return all those keyframes with a score higher than 0.75*bestScore
+    float minScoreToRetain = 0.75f * bestAccScore;
+    set<KeyFrame *> spAlreadyAddedKF;
+    vector<KeyFrame *> vpRelocCandidates;
+    vpRelocCandidates.reserve(lAccScoreAndMatch.size());
+    for (list<pair<float, KeyFrame *>>::iterator it = lAccScoreAndMatch.begin(), itend = lAccScoreAndMatch.end(); it != itend; it++)
+    {
+        const float &si = it->first;
+        if (si > minScoreToRetain)
+        {
+            KeyFrame *pKFi = it->second;
+            if (!spAlreadyAddedKF.count(pKFi))
+            {
+                vpRelocCandidates.push_back(pKFi);
+                spAlreadyAddedKF.insert(pKFi);
+            }
+        }
+    }
+    Dstop = high_resolution_clock::now();
+    Dduration = duration_cast<microseconds>(Dstop - Dstart);
+    after1 = Dduration.count();
+    return vpRelocCandidates;
 }
 
 // map serialization addition
