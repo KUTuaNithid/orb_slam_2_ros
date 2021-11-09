@@ -208,6 +208,7 @@ vector<KeyFrame*> KeyFrameDatabase::DetectLoopCandidates(KeyFrame* pKF, float mi
 bool KeyFrameDatabase::label_check(const KeyFrame* kf, const Frame *F) {
     if (F->labels_(0) != VALID_OBJ){
         // Frame have no label
+        // cout << "F->labels_(0) != VALID_OBJ !!" << F->labels_(0) << endl;
         return true;
     }
     if (kf->labels_(0) != VALID_OBJ){
@@ -216,7 +217,9 @@ bool KeyFrameDatabase::label_check(const KeyFrame* kf, const Frame *F) {
     }
     Eigen::Array<float,MAX_OBJECT_NUM,1> result = F->labels_ - kf->labels_;
     result = result.abs();
-    if ((int)result.sum() < 5){
+    float thres = F->labels_.sum() - VALID_OBJ;
+    if ((int)result.sum() < (thres+1)){
+        cout << F->labels_ << "    " << kf->labels_ << endl;
         return true;
     }
     return false;
@@ -288,7 +291,6 @@ vector<KeyFrame*> KeyFrameDatabase::DetectRelocalizationCandidates(Frame *F)
 {
     list<KeyFrame *> lKFsSharingWords;
     // cout << "DetectRelocalizationCandidates !! " << keyfrmsLst.size() << endl;
-    bool label = false;
     // Search all keyframes that share a word with current frame
     {
         auto bow_start = high_resolution_clock::now();
@@ -330,13 +332,10 @@ vector<KeyFrame*> KeyFrameDatabase::DetectRelocalizationCandidates(Frame *F)
 
     // Only compare against those keyframes that share enough words
     int maxCommonWords = 0;
-    if (!label)
+    for (list<KeyFrame *>::iterator lit = lKFsSharingWords.begin(), lend = lKFsSharingWords.end(); lit != lend; lit++)
     {
-        for (list<KeyFrame *>::iterator lit = lKFsSharingWords.begin(), lend = lKFsSharingWords.end(); lit != lend; lit++)
-        {
-            if ((*lit)->mnRelocWords > maxCommonWords)
-                maxCommonWords = (*lit)->mnRelocWords;
-        }
+        if ((*lit)->mnRelocWords > maxCommonWords)
+            maxCommonWords = (*lit)->mnRelocWords;
     }
 
     int minCommonWords = maxCommonWords * 0.8f;
@@ -351,12 +350,13 @@ vector<KeyFrame*> KeyFrameDatabase::DetectRelocalizationCandidates(Frame *F)
         KeyFrame *pKFi = *lit;
 
         // auto Dstart = high_resolution_clock::now();
-        if (pKFi->mnRelocWords > minCommonWords || label)
+        if (pKFi->mnRelocWords > minCommonWords)
         {
             nscores++;
             float si = mpVoc->score(F->mBowVec, pKFi->mBowVec);
             pKFi->mRelocScore = si;
             lScoreAndMatch.push_back(make_pair(si, pKFi));
+            cout << "Cal" << endl;
         }
         // auto Dstop = high_resolution_clock::now();
         // auto Dduration = duration_cast<microseconds>(Dstop - Dstart);
