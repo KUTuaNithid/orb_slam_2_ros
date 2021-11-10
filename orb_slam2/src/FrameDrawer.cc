@@ -153,7 +153,7 @@ void FrameDrawer::DrawTextInfo(cv::Mat &im, int nState, cv::Mat &imText)
     {
         s << " LOADING ORB VOCABULARY. PLEASE WAIT...";
     }
-
+    s << ", frame_id: " << frame_id;
     int baseline=0;
     cv::Size textSize = cv::getTextSize(s.str(),cv::FONT_HERSHEY_PLAIN,1,1,&baseline);
 
@@ -168,6 +168,7 @@ void FrameDrawer::Update(Tracking *pTracker)
 {
     unique_lock<mutex> lock(mMutex);
     pTracker->mImGray.copyTo(mIm);
+    frame_id = pTracker->mCurrentFrame.mnId;
     mvCurrentKeys=pTracker->mCurrentFrame.mvKeys;
     N = mvCurrentKeys.size();
     mvbVO = vector<bool>(N,false);

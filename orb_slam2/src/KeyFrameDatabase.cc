@@ -219,7 +219,7 @@ bool KeyFrameDatabase::label_check(const KeyFrame* kf, const Frame *F) {
     result = result.abs();
     float thres = F->labels_.sum() - VALID_OBJ;
     if ((int)result.sum() < (thres+1)){
-        cout << F->labels_ << "    " << kf->labels_ << endl;
+        // cout << F->labels_ << "    " << kf->labels_ << endl;
         return true;
     }
     return false;
@@ -356,7 +356,7 @@ vector<KeyFrame*> KeyFrameDatabase::DetectRelocalizationCandidates(Frame *F)
             float si = mpVoc->score(F->mBowVec, pKFi->mBowVec);
             pKFi->mRelocScore = si;
             lScoreAndMatch.push_back(make_pair(si, pKFi));
-            cout << "Cal" << endl;
+            cout << "nscores" << nscores << endl;
         }
         // auto Dstop = high_resolution_clock::now();
         // auto Dduration = duration_cast<microseconds>(Dstop - Dstart);

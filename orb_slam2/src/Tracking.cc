@@ -1360,12 +1360,15 @@ bool Tracking::Relocalization()
 
     for(int i=0; i<nKFs; i++)
     {
+        cout << "Candidate id: " << vpCandidateKFs[i]->mnFrameId << endl;
         KeyFrame* pKF = vpCandidateKFs[i];
         if(pKF->isBad())
             vbDiscarded[i] = true;
         else
         {
             int nmatches = matcher.SearchByBoW(pKF,mCurrentFrame,vvpMapPointMatches[i]);
+            cout << "nmatches: " << nmatches << endl;
+            // cout << "SearchByBoW " << nmatches << endl;
             if(nmatches<15)
             {
                 vbDiscarded[i] = true;
@@ -1390,6 +1393,7 @@ bool Tracking::Relocalization()
     {
         for(int i=0; i<nKFs; i++)
         {
+            cout << "Candidate id: " << vpCandidateKFs[i]->mnFrameId << endl;
             if(vbDiscarded[i])
                 continue;
 
@@ -1401,6 +1405,7 @@ bool Tracking::Relocalization()
             PnPsolver* pSolver = vpPnPsolvers[i];
             cv::Mat Tcw = pSolver->iterate(5,bNoMore,vbInliers,nInliers);
 
+            cout << "pSolver->iterate bNoMore" << bNoMore << endl;
             // If Ransac reachs max. iterations discard keyframe
             if(bNoMore)
             {
@@ -1473,7 +1478,7 @@ bool Tracking::Relocalization()
                 // If the pose is supported by enough inliers stop ransacs and continue
                 if(nGood>=50)
                 {
-                    id = vpCandidateKFs[i]->mnId;
+                    id = vpCandidateKFs[i]->mnFrameId;
                     bMatch = true;
                     break;
                 }

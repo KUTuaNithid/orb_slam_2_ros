@@ -245,6 +245,7 @@ int ORBmatcher::SearchByBoW(KeyFrame* pKF,Frame &F, vector<MapPoint*> &vpMapPoin
                             rotHist[bin].push_back(bestIdxF);
                         }
                         nmatches++;
+                        // cout << "nmatches " << nmatches << endl;
                     }
                 }
 
@@ -546,7 +547,6 @@ int ORBmatcher::SearchByBoW(KeyFrame *pKF1, KeyFrame *pKF2, vector<MapPoint *> &
     DBoW2::FeatureVector::const_iterator f2it = vFeatVec2.begin();
     DBoW2::FeatureVector::const_iterator f1end = vFeatVec1.end();
     DBoW2::FeatureVector::const_iterator f2end = vFeatVec2.end();
-
     while(f1it != f1end && f2it != f2end)
     {
         if(f1it->first == f2it->first)

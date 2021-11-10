@@ -122,7 +122,16 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
 {
     // Frame ID
     mnId=nNextId++;
+    // cout << "frame id: " << mnId <<endl;
+    // std::string windowName = "Test " + std::to_string(mnId); //Name of the window
 
+    // cv::namedWindow(windowName); // Create a window
+
+    // cv::imshow(windowName, imGray); // Show our image inside the created window.
+
+    // cv::waitKey(3); // Wait for any keystroke in the window
+
+    // cv::destroyWindow(windowName); //destroy the created window
     // Scale Level Info
     mnScaleLevels = mpORBextractorLeft->GetLevels();
     mfScaleFactor = mpORBextractorLeft->GetScaleFactor();    
@@ -235,7 +244,7 @@ void Frame::create_labels_vector(const ORB_SLAM2::objectdetection &objects)
     labels_ = Eigen::Array<float,MAX_OBJECT_NUM,1>::Zero();
     
     if (objects.objects_.size() <= 0) {
-        cout << "This frame has no object" << endl;
+        // cout << "This frame has no object" << endl;
         return;
     }
     // Indicate valid object in this frame
