@@ -1473,7 +1473,7 @@ bool Tracking::Relocalization()
                 // If the pose is supported by enough inliers stop ransacs and continue
                 if(nGood>=50)
                 {
-                    id = vpCandidateKFs[i]->mnId;
+                    id = vpCandidateKFs[i]->mnFrameId;
                     bMatch = true;
                     break;
                 }

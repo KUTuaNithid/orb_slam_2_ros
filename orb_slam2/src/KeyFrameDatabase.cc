@@ -343,6 +343,7 @@ vector<KeyFrame *> KeyFrameDatabase::DetectRelocalizationCandidates(Frame *F)
             float si = mpVoc->score(F->mBowVec, pKFi->mBowVec);
             pKFi->mRelocScore = si;
             lScoreAndMatch.push_back(make_pair(si, pKFi));
+            cout << "nscores " << nscores << endl;
         }
         // auto Dstop = high_resolution_clock::now();
         // auto Dduration = duration_cast<microseconds>(Dstop - Dstart);
